@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  lint-and-test:
+  lint-and-download:
+    name: Lint and Download Dataset
     runs-on: ubuntu-latest
 
     steps:
@@ -27,17 +28,85 @@ jobs:
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --exclude=.venv,__pycache__,build,dist --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings.
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 . --exclude=.venv,__pycache__,build,dist --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Download dataset
       run: |
         python data/download_dataset.py
 
+    - name: Upload processed data
+      uses: actions/upload-artifact@v4
+      with:
+        name: processed-data
+        path: data/processed/
+
+  train-model:
+    name: Train Model and Log to MLflow
+    runs-on: ubuntu-latest
+    needs: lint-and-download
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Download processed data
+      uses: actions/download-artifact@v4
+      with:
+        name: processed-data
+        path: data/processed/
+
     - name: Train model and log to MLflow
       run: |
         python src/train.py
+
+    - name: Upload trained model
+      uses: actions/upload-artifact@v4
+      with:
+        name: trained-model
+        path: models/
+
+  test-model:
+    name: Run Unit and Server Tests
+    runs-on: ubuntu-latest
+    needs: train-model
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Download processed data
+      uses: actions/download-artifact@v4
+      with:
+        name: processed-data
+        path: data/processed/
+
+    - name: Download trained model
+      uses: actions/download-artifact@v4
+      with:
+        name: trained-model
+        path: models/
 
     - name: Run unit tests with pytest
       run: |
