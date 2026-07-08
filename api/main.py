@@ -69,7 +69,6 @@ app = FastAPI(
 
 @app.get("/health")
 def health():
-    global model
     status = "healthy"
     model_loaded = model is not None
     if not model_loaded:
@@ -83,7 +82,6 @@ def health():
 
 @app.post("/predict", response_model=PredictResponse)
 def predict(payload: PredictRequest):
-    global model
     if model is None:
         REQUEST_COUNT.labels(endpoint="/predict", method="POST", http_status="503").inc()
         raise HTTPException(status_code=503, detail="Model is not loaded on server.")
