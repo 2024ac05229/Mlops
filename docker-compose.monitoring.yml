@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: heart-disease-api-monitored
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-instance
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-instance
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
