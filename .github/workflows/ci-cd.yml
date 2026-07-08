@@ -1,4 +1,4 @@
-name: Heart Disease MLOps CI/CD
+name: MLOPS pipeline
 
 on:
   push:
